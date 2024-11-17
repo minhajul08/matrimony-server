@@ -33,20 +33,45 @@ async function run() {
       const successStory = client.db('Matrimony').collection('SuccessStory');
       const bioData = client.db('Matrimony').collection('BioData');
       const addToFavorite = client.db('Matrimony').collection('addToFavorite');
-      // const userCollection = client.db('Matrimony').collection ('users')
+      const userCollection = client.db('Matrimony').collection ('users');
 
-      // // user related api 
+      app.post ('/jwt', async (req,res) => {
+        const user = req.body;
+        const token = jwt.sign (user, process.env.ACCESS_TOKEN_SECRET, {
+          expiresIn: '1h'});
+          res.send ( {token} );
+      })
 
-      // app.post('/users', async (req,res) => {
-      //   const user = req.body;
-      //   const query = {email: user.email}
-      //   const existingUser = await userCollection.findOne (query);
-      //   if (existingUser) {
-      //     return res.send ({ message: 'user already exists', insertedId: null})
-      //   }
-      //   const result = await userCollection.insertOne(user)
-      //   res.send (result)
-      // })
+      // middleware 
+
+      const verifyToken = (req,res,next) => {
+        console.log ('inside verify token',req.headers.authorization);
+        if (!req.headers.authorization) {
+          return res.status(401).send ( {message: 'Unauthorized Access'});
+        }
+        const token = req.headers.authorization.split(' ')[1];
+        jwt.verify (token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+          if (err) {
+            return res.status(401).send ( {message: 'Unauthorized Access'})
+          }
+          req.decoded = decoded;
+          next ();
+        })
+        // next ();
+      }
+
+      // user related api 
+
+      app.post('/users', async (req,res) => {
+        const user = req.body;
+        const query = {email: user.email}
+        const existingUser = await userCollection.findOne (query);
+        if (existingUser) {
+          return res.send ({ message: 'user already exists', insertedId: null})
+        }
+        const result = await userCollection.insertOne(user)
+        res.send (result)
+      })
 
 
       // premiumMember 
@@ -89,38 +114,54 @@ async function run() {
       const result = await addToFavorite.deleteOne(query);
       res.send (result)
     })
+ 
+    // users api
+    app.get ('/users', verifyToken, async (req,res) => {
+      
+      const result = await userCollection.find().toArray();
+      res.send (result)
+    })
 
-    // app.get ('/users', async (req,res) => {
-    //   const result = await userCollection.find().toArray();
-    //   res.send (result)
-    // })
+    app.get ('/users/admin/:email', verifyToken, async (req,res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email){
+        return res.status(403).send ({message: 'forbidden access'})
+      }
+      const query = {email: email};
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin =user?.role === 'admin';
+      }
+      res.send ({ admin });
+    })
 
-    // // make admin
-    // app.patch('/users/admin/:id', async (req, res) => {
-    //   const id = req.params.id;
-    //   const filter = { _id: new ObjectId(id) };
-    //   const updatedDoc = {
-    //     $set: {
-    //       role: 'admin'
-    //     }
-    //   };
-    //   const result = await userCollection.updateOne(filter, updatedDoc);
-    //   res.send(result);
-    // });
+    // make admin
+    app.patch('/users/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: 'admin'
+        }
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
     
-    // // make premium
+    // make premium
 
-    // app.patch ('/users/premium/:id', async (req,res) => {
-    //   const id = req.params.id;
-    //   const filter = {_id: new ObjectId(id)};
-    //   const updatedDoc = {
-    //     $set : {
-    //       premium: 'premium'
-    //     }
-    //   };
-    //   const result = await userCollection.updateOne(filter,updatedDoc)
-    //   res.send(result)
-    // })
+    app.patch ('/users/premium/:id', async (req,res) => {
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const updatedDoc = {
+        $set : {
+          premium: 'premium'
+        }
+      };
+      const result = await userCollection.updateOne(filter,updatedDoc)
+      res.send(result)
+    })
      
 
      // add to favorite
