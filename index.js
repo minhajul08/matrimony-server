@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express ();
 const cors = require ('cors');
+const jwt = require ('jsonwebtoken');
 const { ObjectId } = require('mongodb')
 require('dotenv').config()
 const port = process.env.PORT || 5000;
@@ -32,6 +33,20 @@ async function run() {
       const successStory = client.db('Matrimony').collection('SuccessStory');
       const bioData = client.db('Matrimony').collection('BioData');
       const addToFavorite = client.db('Matrimony').collection('addToFavorite');
+      // const userCollection = client.db('Matrimony').collection ('users')
+
+      // // user related api 
+
+      // app.post('/users', async (req,res) => {
+      //   const user = req.body;
+      //   const query = {email: user.email}
+      //   const existingUser = await userCollection.findOne (query);
+      //   if (existingUser) {
+      //     return res.send ({ message: 'user already exists', insertedId: null})
+      //   }
+      //   const result = await userCollection.insertOne(user)
+      //   res.send (result)
+      // })
 
 
       // premiumMember 
@@ -74,7 +89,38 @@ async function run() {
       const result = await addToFavorite.deleteOne(query);
       res.send (result)
     })
+
+    // app.get ('/users', async (req,res) => {
+    //   const result = await userCollection.find().toArray();
+    //   res.send (result)
+    // })
+
+    // // make admin
+    // app.patch('/users/admin/:id', async (req, res) => {
+    //   const id = req.params.id;
+    //   const filter = { _id: new ObjectId(id) };
+    //   const updatedDoc = {
+    //     $set: {
+    //       role: 'admin'
+    //     }
+    //   };
+    //   const result = await userCollection.updateOne(filter, updatedDoc);
+    //   res.send(result);
+    // });
     
+    // // make premium
+
+    // app.patch ('/users/premium/:id', async (req,res) => {
+    //   const id = req.params.id;
+    //   const filter = {_id: new ObjectId(id)};
+    //   const updatedDoc = {
+    //     $set : {
+    //       premium: 'premium'
+    //     }
+    //   };
+    //   const result = await userCollection.updateOne(filter,updatedDoc)
+    //   res.send(result)
+    // })
      
 
      // add to favorite
