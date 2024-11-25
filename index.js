@@ -45,7 +45,7 @@ async function run() {
       // middleware 
 
       const verifyToken = (req,res,next) => {
-        console.log ('inside verify token',req.headers.authorization);
+     
         if (!req.headers.authorization) {
           return res.status(401).send ( {message: 'Unauthorized Access'});
         }
@@ -57,7 +57,18 @@ async function run() {
           req.decoded = decoded;
           next ();
         })
-        // next ();
+      }
+        
+      // use verify admin after verifyToken
+      const verifyAdmin = async (req,res,next) => {
+        const email = req.decoded.email;
+        const query = { email: email };
+        const user = await userCollection.findOne(query);
+        const isAdmin = user?.role === 'admin';
+        if (!isAdmin) {
+          return res.status(403).send( {message:'forbidden access' });
+        }
+        next ();
       }
 
       // user related api 
@@ -94,6 +105,12 @@ async function run() {
         res.send(result)
       })
 
+      app.post ('/bioData', async (req,res) => {
+        const item = req.body;
+        const result = await bioData.insertOne(item);
+        res.send (result);
+      })
+
       app.get('/bioDataDetails/:id',  async (req, res) => {
         const id = req.params.id
         const query = { _id: new ObjectId(id) }
@@ -116,13 +133,13 @@ async function run() {
     })
  
     // users api
-    app.get ('/users', verifyToken, async (req,res) => {
+    app.get ('/users', verifyToken, verifyAdmin, async (req,res) => {
       
       const result = await userCollection.find().toArray();
       res.send (result)
     })
 
-    app.get ('/users/admin/:email', verifyToken, async (req,res) => {
+    app.get ('/users/admin/:email', verifyToken, verifyAdmin, async (req,res) => {
       const email = req.params.email;
       if (email !== req.decoded.email){
         return res.status(403).send ({message: 'forbidden access'})
@@ -137,7 +154,7 @@ async function run() {
     })
 
     // make admin
-    app.patch('/users/admin/:id', async (req, res) => {
+    app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updatedDoc = {
